@@ -9,51 +9,114 @@
 </head>
 <body>
 
-  <!-- LOGIN -->
+  <!-- LOGIN / REGISTRO -->
   <section id="login" class="login">
-    <form id="formLogin" class="card login-card">
+    <div class="card login-card">
       <img src="img/logo.svg" alt="Castillo de Chancay" class="logo-grande">
       <h1>Vinos Castillo de Chancay</h1>
-      <p class="muted">Sistema de gestión de vinos</p>
-      <label>Usuario <input id="usuario" autocomplete="username" required></label>
-      <label>Contraseña <input id="clave" type="password" autocomplete="current-password" required></label>
-      <p id="errorLogin" class="error"></p>
-      <button class="btn">Ingresar</button>
-    </form>
+      <div class="tabs">
+        <button type="button" data-tab="ingresar" class="activo">Ingresar</button>
+        <button type="button" data-tab="registro">Crear cuenta</button>
+      </div>
+
+      <form id="formLogin" class="form-grid">
+        <label>Usuario <input id="usuario" autocomplete="username" required></label>
+        <label>Contraseña <input id="clave" type="password" autocomplete="current-password" required></label>
+        <p id="errorLogin" class="error"></p>
+        <button class="btn">Ingresar</button>
+      </form>
+
+      <form id="formRegistro" class="form-grid oculto">
+        <label>Nombre completo <input id="regNombre" required></label>
+        <label>Usuario <input id="regUsuario" autocomplete="username" required></label>
+        <label>Contraseña <input id="regClave" type="password" minlength="4" autocomplete="new-password" required></label>
+        <p id="errorRegistro" class="error"></p>
+        <button class="btn">Crear cuenta</button>
+      </form>
+    </div>
   </section>
 
-  <!-- APP -->
   <div id="app" class="oculto">
     <header class="topbar">
       <div class="marca"><img src="img/logo.svg" alt=""><span>Castillo de Chancay</span></div>
-      <nav>
-        <button data-vista="panel" class="activo">Panel</button>
-        <button data-vista="vinos">Vinos</button>
-        <button data-vista="ventas">Ventas</button>
-      </nav>
-      <div class="usuario"><span id="nombreUsuario"></span> <button id="salir" class="btn-sec">Salir</button></div>
+      <nav id="nav"></nav>
+      <div class="usuario">
+        <span id="nombreUsuario"></span> <span id="rolUsuario" class="rol"></span>
+        <button id="salir" class="btn-sec">Salir</button>
+      </div>
     </header>
 
     <main>
-      <!-- PANEL -->
-      <section id="vista-panel" class="vista">
+      <!-- ===== CLIENTE ===== -->
+      <section id="vista-tienda" class="vista oculto">
+        <div class="cabecera">
+          <h2>Nuestros vinos</h2>
+          <input id="buscarTienda" placeholder="Buscar vino…">
+        </div>
+        <div id="catalogo" class="catalogo"></div>
+      </section>
+
+      <section id="vista-carrito" class="vista oculto">
+        <h2>Mi carrito</h2>
+        <div class="card tabla-wrap">
+          <table>
+            <thead><tr><th>Vino</th><th>Precio</th><th>Cantidad</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="tablaCarrito"></tbody>
+          </table>
+        </div>
+        <div class="total-compra">
+          <b>Total: <span id="totalCarrito">S/ 0.00</span></b>
+          <button id="comprar" class="btn">Confirmar compra</button>
+        </div>
+        <p id="msgCarrito" class="error"></p>
+      </section>
+
+      <section id="vista-miscompras" class="vista oculto">
+        <h2>Mis compras</h2>
+        <div id="listaMisCompras"></div>
+      </section>
+
+      <!-- ===== ADMINISTRADOR ===== -->
+      <section id="vista-panel" class="vista oculto">
         <h2>Panel</h2>
         <div class="stats">
-          <div class="card stat"><span>Vinos registrados</span><b id="sVinos">0</b></div>
+          <div class="card stat"><span>Ventas de hoy</span><b id="sHoy">S/ 0.00</b></div>
+          <div class="card stat"><span>Ventas totales</span><b id="sTotal">S/ 0.00</b></div>
+          <div class="card stat"><span>Pedidos</span><b id="sPedidos">0</b></div>
+          <div class="card stat"><span>Clientes</span><b id="sClientes">0</b></div>
           <div class="card stat"><span>Botellas en stock</span><b id="sStock">0</b></div>
           <div class="card stat"><span>Valor del inventario</span><b id="sValor">S/ 0.00</b></div>
-          <div class="card stat"><span>Ventas de hoy</span><b id="sHoy">S/ 0.00</b></div>
         </div>
-        <div class="card">
-          <h3>Stock bajo (≤ 5 botellas)</h3>
-          <ul id="stockBajo" class="lista"></ul>
+        <div class="dos-col">
+          <div class="card">
+            <h3>Vinos más vendidos</h3>
+            <ol id="topVinos" class="lista"></ol>
+          </div>
+          <div class="card">
+            <h3>Stock bajo (≤ 5 botellas)</h3>
+            <ul id="stockBajo" class="lista"></ul>
+          </div>
         </div>
       </section>
 
-      <!-- VINOS -->
+      <section id="vista-ventas" class="vista oculto">
+        <div class="cabecera">
+          <h2>Ventas</h2>
+          <input id="filtroVentas" placeholder="Buscar por cliente o vino…">
+          <input id="fechaVentas" type="date">
+        </div>
+        <div class="card tabla-wrap">
+          <table>
+            <thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Detalle</th><th>Total</th><th></th></tr></thead>
+            <tbody id="tablaVentas"></tbody>
+            <tfoot><tr><th colspan="4">Total mostrado</th><th id="totalVentas">S/ 0.00</th><th></th></tr></tfoot>
+          </table>
+        </div>
+      </section>
+
       <section id="vista-vinos" class="vista oculto">
         <div class="cabecera">
-          <h2>Vinos</h2>
+          <h2>Inventario de vinos</h2>
           <input id="buscar" placeholder="Buscar por nombre, tipo o cepa…">
           <button id="nuevoVino" class="btn">+ Nuevo vino</button>
         </div>
@@ -65,20 +128,12 @@
         </div>
       </section>
 
-      <!-- VENTAS -->
-      <section id="vista-ventas" class="vista oculto">
-        <h2>Ventas</h2>
-        <form id="formVenta" class="card fila-form">
-          <label>Vino <select id="ventaVino" required></select></label>
-          <label>Cantidad <input id="ventaCant" type="number" min="1" value="1" required></label>
-          <label>Cliente <input id="ventaCliente" placeholder="Opcional"></label>
-          <button class="btn">Registrar venta</button>
-        </form>
-        <p id="errorVenta" class="error"></p>
+      <section id="vista-clientes" class="vista oculto">
+        <h2>Clientes</h2>
         <div class="card tabla-wrap">
           <table>
-            <thead><tr><th>Fecha</th><th>Vino</th><th>Cant.</th><th>Cliente</th><th>Total</th><th></th></tr></thead>
-            <tbody id="tablaVentas"></tbody>
+            <thead><tr><th>Nombre</th><th>Usuario</th><th>Registrado</th><th>Compras</th><th>Total gastado</th></tr></thead>
+            <tbody id="tablaClientes"></tbody>
           </table>
         </div>
       </section>

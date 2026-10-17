@@ -64,3 +64,33 @@ dialog::backdrop { background: rgba(0,0,0,.45); }
 .form-grid { display: grid; gap: 10px; }
 .form-grid h3 { margin: 0 0 4px; }
 .acciones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+/* Login tabs */
+.tabs { display: flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+.tabs button { flex: 1; padding: 8px; border: 0; background: transparent; cursor: pointer; font: inherit; color: var(--muted); }
+.tabs button.activo { background: var(--vino); color: #fff; }
+.login-card .form-grid { text-align: left; }
+
+.rol { background: var(--oro); color: var(--vino); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; }
+.badge { background: var(--oro); color: var(--vino); font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 99px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Catálogo */
+.catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 12px; }
+.producto { display: flex; flex-direction: column; gap: 4px; }
+.producto h3 { margin: 6px 0 0; }
+.producto p { margin: 0; }
+.producto .btn { margin-top: auto; }
+.botella { height: 110px; border-radius: 8px; display: grid; place-items: center; font-size: 48px; background: #f3e6e8; }
+.tipo-blanco, .tipo-espumante { background: #f7f0d6; }
+.tipo-rosado { background: #fbe3e8; }
+.tipo-dulce { background: #f6e7d3; }
+.precio { font-size: 20px; font-weight: 700; color: var(--vino); }
+
+.cant { width: 80px; margin: 0; }
+.total-compra { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 12px; font-size: 18px; }
+.pedido { display: grid; grid-template-columns: 1.5fr 2fr auto; gap: 12px; align-items: center; margin-bottom: 10px; }
+@media (max-width: 700px) { .pedido { grid-template-columns: 1fr; } }
+.dos-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.cabecera input[type=date] { max-width: 170px; }
+tfoot th { background: #faf6f0; color: var(--texto); }

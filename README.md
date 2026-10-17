@@ -1,6 +1,6 @@
 # Sistema de Vinos – Castillo de Chancay
 
-Sistema web simple para gestionar vinos: inventario, ventas y panel de resumen.
+Sistema web de venta de vinos con dos tipos de acceso: **cliente** (compra) y **administrador** (ve las ventas).
 
 ## Cómo usarlo
 Abre `index.html` en el navegador (doble clic) o sirve la carpeta:
@@ -12,17 +12,24 @@ python3 -m http.server 8000
 y entra a http://localhost:8000
 
 ## Acceso
-| Usuario | Contraseña   |
-|---------|--------------|
-| admin   | chancay2026  |
+| Rol | Usuario | Contraseña |
+|-----|---------|------------|
+| Administrador | admin | chancay2026 |
+| Cliente (prueba) | cliente | cliente123 |
 
-Para cambiar o agregar usuarios edita la lista `USUARIOS` al inicio de `js/app.js`.
+Los clientes también pueden crear su propia cuenta con **Crear cuenta**.
 
 ## Funciones
-- Login con usuario y contraseña
-- Panel: total de vinos, botellas, valor del inventario, ventas del día y alertas de stock bajo
-- Vinos: crear, editar, eliminar y buscar
-- Ventas: registrar (descuenta stock) y anular (devuelve stock)
+**Cliente**
+- Tienda con catálogo y buscador
+- Carrito: agregar, cambiar cantidades, quitar y confirmar compra (descuenta stock)
+- Mis compras: historial de pedidos
+
+**Administrador**
+- Panel: ventas de hoy y totales, pedidos, clientes, stock, vinos más vendidos y stock bajo
+- Ventas: todos los pedidos con cliente y detalle, filtro por texto y fecha, anular (devuelve stock)
+- Inventario: crear, editar, eliminar y buscar vinos
+- Clientes: lista con número de compras y total gastado
 
 Los datos se guardan en el navegador (localStorage).
 
