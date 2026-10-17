@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Castillo de Chancay">
+  <circle cx="100" cy="100" r="96" fill="#5a1220" stroke="#c9a14a" stroke-width="6"/>
+  <!-- castillo -->
+  <g fill="#c9a14a">
+    <path d="M42 140V82h8v-8h8v8h8v-8h8v8h4v58z"/>
+    <path d="M122 140V82h4v-8h8v8h8v-8h8v8h8v58z"/>
+    <path d="M78 140V62h6v-9h8v9h8v-9h8v9h6v78z"/>
+    <path d="M100 30l12 20H88z"/>
+    <rect x="98" y="22" width="4" height="10"/>
+    <path d="M30 140h140v8H30z"/>
+  </g>
+  <g fill="#5a1220">
+    <path d="M92 140v-20a8 8 0 0 1 16 0v20z"/>
+    <rect x="55" y="96" width="6" height="12" rx="3"/>
+    <rect x="139" y="96" width="6" height="12" rx="3"/>
+    <rect x="97" y="74" width="6" height="12" rx="3"/>
+  </g>
+  <text x="100" y="170" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#c9a14a" letter-spacing="2">CHANCAY</text>
+</svg>
