@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WiFi Castillo de Chancay</title>
+  <!--
+    Portal cautivo – Castillo de Chancay
+    Archivo único (CSS, JS y logo incluidos) para poder subirlo tal cual al router.
+    Integración con el router: ver la sección "CONEXIÓN CON EL ROUTER" al final del script.
+  -->
+  <style>
+    :root {
+      --vino: #5a1220; --vino-2: #7d1a2e; --oro: #c9a14a;
+      --fondo: #f6f1ea; --card: #fff; --texto: #2b1a1d; --muted: #7a6a6c; --borde: #e6dcd2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: var(--texto); display: grid; place-items: center; padding: 72px 16px 24px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(201,161,74,.18), transparent 45%),
+        linear-gradient(160deg, var(--vino) 0%, #2a0810 100%);
+    }
+    .oculto { display: none !important; }
+    .card {
+      width: 100%; max-width: 380px; background: var(--card); border-radius: 16px;
+      padding: 28px 22px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.35); text-align: center;
+    }
+    .logo { width: 96px; height: 96px; margin: -76px auto 8px; display: block;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+    h1 { font-family: Georgia, serif; color: var(--vino); font-size: 24px; margin: 4px 0 2px; }
+    .sub { color: var(--muted); margin: 0 0 16px; font-size: 15px; }
+    .wifi { display: inline-flex; align-items: center; gap: 6px; background: #faf6f0;
+      border: 1px solid var(--borde); color: var(--vino); font-weight: 600; font-size: 13px;
+      padding: 5px 12px; border-radius: 99px; margin-bottom: 18px; }
+    .wifi svg { width: 16px; height: 16px; }
+
+    .tabs { display: flex; border: 1px solid var(--borde); border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+    .tabs button { flex: 1; padding: 10px; border: 0; background: transparent; cursor: pointer; font: inherit; color: var(--muted); }
+    .tabs button.activo { background: var(--vino); color: #fff; }
+
+    form { display: grid; gap: 12px; text-align: left; }
+    label { display: block; font-size: 14px; color: var(--muted); }
+    input[type=text], input[type=email], input[type=tel] {
+      width: 100%; padding: 11px 12px; border: 1px solid var(--borde); border-radius: 10px;
+      font: inherit; font-size: 16px; margin-top: 4px; color: var(--texto); background: #fff;
+    }
+    input:focus { outline: 2px solid var(--oro); outline-offset: 1px; border-color: var(--oro); }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--texto); }
+    .check input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--vino); flex: none; }
+    .check a { color: var(--vino); font-weight: 600; }
+    .btn { width: 100%; background: var(--vino); color: #fff; border: 0; border-radius: 10px;
+      padding: 13px 16px; cursor: pointer; font: inherit; font-weight: 700; font-size: 16px; }
+    .btn:hover { background: var(--vino-2); }
+    .btn:disabled { opacity: .6; cursor: wait; }
+    .error { color: #b00020; min-height: 1em; margin: 0; font-size: 14px; }
+
+    .pie { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--borde);
+      color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .pie b { color: var(--vino); }
+
+    /* Pantalla de éxito */
+    .ok-icono { width: 64px; height: 64px; border-radius: 50%; background: #e9f5ec; color: #1e7a3c;
+      display: grid; place-items: center; margin: 4px auto 10px; }
+    .ok-icono svg { width: 34px; height: 34px; }
+    .datos { background: #faf6f0; border: 1px solid var(--borde); border-radius: 10px; padding: 12px;
+      text-align: left; font-size: 14px; margin: 14px 0; display: grid; gap: 6px; }
+    .datos div { display: flex; justify-content: space-between; gap: 10px; }
+    .datos span { color: var(--muted); }
+    .promo { background: linear-gradient(135deg, var(--vino), #3a0a14); color: #fff; border-radius: 12px;
+      padding: 14px; text-align: left; margin-bottom: 14px; }
+    .promo b { color: var(--oro); font-family: Georgia, serif; font-size: 17px; display: block; margin-bottom: 2px; }
+    .promo p { margin: 0; font-size: 14px; opacity: .9; }
+    .codigo { display: inline-block; margin-top: 8px; border: 1px dashed var(--oro); color: var(--oro);
+      padding: 3px 10px; border-radius: 6px; font-weight: 700; letter-spacing: 1px; }
+
+    dialog { border: 0; border-radius: 14px; padding: 20px; width: min(420px, 92vw); max-height: 80vh; }
+    dialog::backdrop { background: rgba(0,0,0,.5); }
+    dialog h3 { font-family: Georgia, serif; color: var(--vino); margin-top: 0; }
+    dialog ol { padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--texto); }
+  </style>
+</head>
+<body>
+
+  <!-- ===== REGISTRO ===== -->
+  <main id="pantallaIngreso" class="card">
+    <svg class="logo" viewBox="0 0 200 200" role="img" aria-label="Castillo de Chancay">
+      <circle cx="100" cy="100" r="96" fill="#5a1220" stroke="#c9a14a" stroke-width="6"/>
+      <g fill="#c9a14a">
+        <path d="M42 140V82h8v-8h8v8h8v-8h8v8h4v58z"/><path d="M122 140V82h4v-8h8v8h8v-8h8v8h8v58z"/>
+        <path d="M78 140V62h6v-9h8v9h8v-9h8v9h6v78z"/><path d="M100 30l12 20H88z"/>
+        <rect x="98" y="22" width="4" height="10"/><path d="M30 140h140v8H30z"/>
+      </g>
+      <g fill="#5a1220">
+        <path d="M92 140v-20a8 8 0 0 1 16 0v20z"/><rect x="55" y="96" width="6" height="12" rx="3"/>
+        <rect x="139" y="96" width="6" height="12" rx="3"/><rect x="97" y="74" width="6" height="12" rx="3"/>
+      </g>
+      <text x="100" y="170" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#c9a14a" letter-spacing="2">CHANCAY</text>
+    </svg>
+
+    <h1>Bienvenido al Castillo</h1>
+    <p class="sub">Conéctate gratis a nuestro WiFi y disfruta tu visita.</p>
+    <span class="wifi">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+      Castillo de Chancay – Visitantes
+    </span>
+
+    <div class="tabs">
+      <button type="button" data-tab="registro" class="activo">Registrarme</button>
+      <button type="button" data-tab="codigo">Tengo un código</button>
+    </div>
+
+    <form id="formRegistro" novalidate>
+      <label>Nombre completo
+        <input type="text" id="nombre" autocomplete="name" placeholder="Ej. María Pérez" required>
+      </label>
+      <label>Correo o celular
+        <input type="text" id="contacto" autocomplete="email" placeholder="tucorreo@gmail.com o 987 654 321" required>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="terminos">
+        <span>Acepto los <a href="#" id="verTerminos">términos de uso</a> del WiFi.</span>
+      </label>
+      <label class="check">
+        <input type="checkbox" id="promos" checked>
+        <span>Quiero recibir ofertas y novedades de nuestros vinos.</span>
+      </label>
+      <p id="errorRegistro" class="error"></p>
+      <button class="btn">Conectarme</button>
+    </form>
+
+    <form id="formCodigo" class="oculto" novalidate>
+      <label>Código de acceso
+        <input type="text" id="codigo" placeholder="Ej. VINO-2026" autocapitalize="characters" required>
+      </label>
+      <p class="sub" style="margin:0;font-size:13px">Pide tu código en recepción o en la tienda de vinos.</p>
+      <p id="errorCodigo" class="error"></p>
+      <button class="btn">Conectarme</button>
+    </form>
+
+    <div class="pie">
+      Conexión gratuita por <b>2 horas</b> por dispositivo.<br>
+      Castillo de Chancay · Chancay, Lima
+    </div>
+  </main>
+
+  <!-- ===== CONECTADO ===== -->
+  <main id="pantallaOk" class="card oculto">
+    <div class="ok-icono">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+    </div>
+    <h1>¡Ya estás conectado!</h1>
+    <p class="sub" id="saludo">Disfruta tu visita.</p>
+
+    <div class="datos">
+      <div><span>Red</span><b>Castillo de Chancay – Visitantes</b></div>
+      <div><span>Tiempo restante</span><b id="tiempo">2:00:00</b></div>
+    </div>
+
+    <div class="promo">
+      <b>10% de descuento en la tienda</b>
+      <p>Muestra este código al comprar tus vinos durante tu visita.</p>
+      <span class="codigo">CASTILLO10</span>
+    </div>
+
+    <button class="btn" id="navegar">Empezar a navegar</button>
+  </main>
+
+  <!-- ===== TÉRMINOS ===== -->
+  <dialog id="modalTerminos">
+    <h3>Términos de uso del WiFi</h3>
+    <ol>
+      <li>El servicio es gratuito y está disponible durante tu visita (2 horas por dispositivo).</li>
+      <li>No está permitido usar la red para actividades ilegales, descargas masivas o contenido inapropiado.</li>
+      <li>Tus datos se usan solo para darte acceso y, si lo aceptaste, para enviarte ofertas. Puedes darte de baja cuando quieras.</li>
+      <li>La velocidad puede variar según la cantidad de usuarios conectados.</li>
+      <li>El Castillo puede interrumpir la conexión en caso de mal uso.</li>
+    </ol>
+    <button class="btn" id="cerrarTerminos">Entendido</button>
+  </dialog>
+
+  <script>
+    var DURACION_SEG = 2 * 60 * 60;          // 2 horas
+    var CODIGOS_VALIDOS = ['VINO-2026', 'CASTILLO', 'VISITA'];
+    var URL_DESPUES = 'https://www.google.com';
+
+    var $ = function (id) { return document.getElementById(id); };
+
+    // Pestañas
+    document.querySelectorAll('.tabs button').forEach(function (b) {
+      b.onclick = function () {
+        document.querySelectorAll('.tabs button').forEach(function (x) { x.classList.toggle('activo', x === b); });
+        $('formRegistro').classList.toggle('oculto', b.dataset.tab !== 'registro');
+        $('formCodigo').classList.toggle('oculto', b.dataset.tab !== 'codigo');
+      };
+    });
+
+    // Términos
+    $('verTerminos').onclick = function (e) { e.preventDefault(); $('modalTerminos').showModal(); };
+    $('cerrarTerminos').onclick = function () { $('modalTerminos').close(); $('terminos').checked = true; };
+
+    function esContactoValido(v) {
+      var correo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      var celular = /^9\d{8}$/.test(v.replace(/[\s+-]/g, '').replace(/^51/, ''));
+      return correo || celular;
+    }
+
+    function guardarRegistro(datos) {
+      try {
+        var lista = JSON.parse(localStorage.getItem('wifiRegistros') || '[]');
+        lista.push(datos);
+        localStorage.setItem('wifiRegistros', JSON.stringify(lista));
+      } catch (e) { /* sin almacenamiento: seguimos igual */ }
+    }
+
+    $('formRegistro').onsubmit = function (e) {
+      e.preventDefault();
+      var nombre = $('nombre').value.trim();
+      var contacto = $('contacto').value.trim();
+      var err = $('errorRegistro');
+      if (nombre.length < 3) { err.textContent = 'Escribe tu nombre completo.'; return; }
+      if (!esContactoValido(contacto)) { err.textContent = 'Ingresa un correo o un celular válido (9 dígitos).'; return; }
+      if (!$('terminos').checked) { err.textContent = 'Debes aceptar los términos de uso.'; return; }
+      err.textContent = '';
+      guardarRegistro({ nombre: nombre, contacto: contacto, promos: $('promos').checked, fecha: new Date().toISOString() });
+      conectar(this, nombre.split(' ')[0]);
+    };
+
+    $('formCodigo').onsubmit = function (e) {
+      e.preventDefault();
+      var c = $('codigo').value.trim().toUpperCase();
+      if (CODIGOS_VALIDOS.indexOf(c) === -1) { $('errorCodigo').textContent = 'Código no válido. Consulta en recepción.'; return; }
+      $('errorCodigo').textContent = '';
+      conectar(this, null);
+    };
+
+    function conectar(form, nombre) {
+      var btn = form.querySelector('.btn');
+      btn.disabled = true; btn.textContent = 'Conectando…';
+      setTimeout(function () {
+        // ===== CONEXIÓN CON EL ROUTER =====
+        // Aquí se autoriza el dispositivo en el router. Ejemplo para MikroTik Hotspot:
+        //   enviar un formulario POST a $(link-login-only) con username/password del usuario de visitantes.
+        // Para OpenWRT (openNDS) se redirige a la URL de autenticación que entrega el router.
+        $('pantallaIngreso').classList.add('oculto');
+        $('pantallaOk').classList.remove('oculto');
+        $('saludo').textContent = nombre ? '¡Hola, ' + nombre + '! Disfruta tu visita.' : 'Disfruta tu visita.';
+        iniciarContador();
+      }, 900);
+    }
+
+    function iniciarContador() {
+      var fin = Date.now() + DURACION_SEG * 1000;
+      function pintar() {
+        var s = Math.max(0, Math.round((fin - Date.now()) / 1000));
+        var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+        $('tiempo').textContent = h + ':' + String(m).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+      }
+      pintar(); setInterval(pintar, 1000);
+    }
+
+    $('navegar').onclick = function () { location.href = URL_DESPUES; };
+  </script>
+</body>
+</html>

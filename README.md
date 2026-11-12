@@ -36,3 +36,15 @@ Los datos se guardan en el navegador (localStorage).
 ## Logo
 `img/logo.svg` es un logo del castillo. Para usar el logo oficial, reemplaza ese archivo
 (o cambia las rutas `img/logo.svg` en `index.html` por tu imagen, p. ej. `img/logo.png`).
+
+## Portal cautivo (WiFi de visitantes)
+`portal/index.html` es la página que ven los visitantes al conectarse al WiFi
+"Castillo de Chancay – Visitantes". Es un solo archivo (estilos, logo y código incluidos)
+para poder subirlo directamente al router.
+
+- **Registrarme**: nombre + correo o celular + aceptar términos (opción de recibir ofertas).
+- **Tengo un código**: acceso con código de recepción (de prueba: `VINO-2026`, `CASTILLO`, `VISITA`).
+- Al conectarse: saludo, tiempo restante (2 horas) y cupón `CASTILLO10` de 10% en la tienda.
+
+Capturas en `portal/capturas/`. Los pasos para conectarlo al router (MikroTik, OpenWRT, etc.)
+están marcados en el código como `CONEXIÓN CON EL ROUTER`.
