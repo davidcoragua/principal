@@ -15,7 +15,7 @@ Ejecutar:
 from pathlib import Path
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, url_for
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, r2_score
@@ -95,7 +95,8 @@ def leer_casa(datos):
 
 @app.route("/")
 def inicio():
-    return render_template("index.html", zonas=ZONAS)
+    return render_template("index.html", zonas=ZONAS, preview=False, modelo=None,
+                           chart_src=url_for("static", filename="chart.umd.min.js"))
 
 
 @app.get("/api/modelo")

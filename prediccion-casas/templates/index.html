@@ -1,275 +1,581 @@
-<!DOCTYPE html>
+{% if not preview %}<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tasador IA de Viviendas</title>
-<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+{% endif %}<title>Tasador IA de Viviendas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap">
+<script src="{{ chart_src }}"></script>
 <style>
+  /* Layout: barra superior + pestañas (Estimar / Cómo aprende / Registrar venta).
+     En celular: los controles van primero y una barra fija abajo muestra el precio en todo momento. */
   :root {
-    --bg: #f4f6fb; --card: #fff; --text: #1d2433; --muted: #6b7385; --line: #e3e7ef;
-    --primary: #2f6fed; --primary-soft: #e8f0ff; --ok: #1f9d63; --warn: #d9822b; --gray: #8a93a6;
+    --bg: #f2f5f4; --surface: #ffffff; --surface-2: #f7f9f8; --ink: #14211f; --muted: #5b6b68;
+    --line: #dde5e3; --accent: #0e7c6b; --accent-ink: #ffffff; --accent-soft: #e2f3ef;
+    --pos: #127a4a; --neg: #b8561b; --neg-soft: #fbeee4; --focus: #f2b632;
+    --shadow: 0 1px 2px rgba(20,33,31,.06), 0 6px 20px rgba(20,33,31,.06);
+    --display: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+    --body: "Inter", "Segoe UI", system-ui, sans-serif;
+    --mono: ui-monospace, "Cascadia Code", Consolas, monospace;
+    --r: 14px;
   }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0d1514; --surface: #142120; --surface-2: #192927; --ink: #e5eeec; --muted: #9db0ac;
+    --line: #263936; --accent: #3cc2a9; --accent-ink: #062520; --accent-soft: #173a34;
+    --pos: #4fd08f; --neg: #f09a5d; --neg-soft: #3a2619; --shadow: none; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #0d1514; --surface: #142120; --surface-2: #192927; --ink: #e5eeec; --muted: #9db0ac;
+    --line: #263936; --accent: #3cc2a9; --accent-ink: #062520; --accent-soft: #173a34;
+    --pos: #4fd08f; --neg: #f09a5d; --neg-soft: #3a2619; --shadow: none; color-scheme: dark }
+
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         background: var(--bg); color: var(--text); line-height: 1.45; }
-  header { background: linear-gradient(120deg, #1c3f94, #2f6fed); color: #fff; padding: 28px 16px; }
-  header .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { margin: 0; font-size: 1.7rem; }
-  header p { margin: 4px 0 0; opacity: .85; }
-  .tag { background: rgba(255,255,255,.18); padding: 4px 10px; border-radius: 99px; font-size: .8rem; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
-  main { padding: 24px 0 48px; }
-  .grid { display: grid; gap: 20px; grid-template-columns: 1fr 1.25fr; }
-  .grid-2 { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; margin-top: 20px; }
-  @media (max-width: 860px) { .grid, .grid-2 { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
-  .card h2 { margin: 0 0 4px; font-size: 1.1rem; }
-  .card .sub { color: var(--muted); font-size: .88rem; margin: 0 0 16px; }
-  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; }
-  .field { margin-bottom: 14px; }
-  .row { display: flex; gap: 10px; align-items: center; }
-  input[type=range] { flex: 1; accent-color: var(--primary); }
-  input[type=number], select { width: 100%; padding: 9px 10px; border: 1px solid var(--line);
-         border-radius: 8px; font-size: .95rem; background: #fff; }
-  .val { min-width: 64px; text-align: right; font-weight: 700; color: var(--primary); }
-  button { background: var(--primary); color: #fff; border: 0; border-radius: 8px; padding: 11px 16px;
-           font-size: .95rem; font-weight: 600; cursor: pointer; width: 100%; }
-  button:hover { filter: brightness(1.08); }
-  .precio { font-size: 2.6rem; font-weight: 800; margin: 4px 0; color: var(--primary); }
-  .rango { color: var(--muted); font-size: .9rem; }
-  .comp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
-  @media (max-width: 520px) { .comp { grid-template-columns: 1fr; } }
-  .comp div { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
-  .comp small { color: var(--muted); display: block; font-size: .75rem; }
-  .comp strong { font-size: 1.1rem; }
-  .comp .best { border-color: var(--primary); background: var(--primary-soft); }
-  .bar { display: grid; grid-template-columns: 130px 1fr 90px; gap: 8px; align-items: center;
-         font-size: .85rem; margin: 6px 0; }
-  .bar .track { height: 10px; background: var(--line); border-radius: 99px; position: relative; overflow: hidden; }
-  .bar .fill { position: absolute; top: 0; bottom: 0; border-radius: 99px; }
-  .bar .num { text-align: right; font-variant-numeric: tabular-nums; }
-  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-  th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
-  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; }
-  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
-  .pill { padding: 2px 8px; border-radius: 99px; font-size: .78rem; font-weight: 600; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px));
+          padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+  h2 { font-size: 1.15rem; } h3 { font-size: .98rem; }
+  p { margin: 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: .84rem; }
+  .eyebrow { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+  /* Barra superior */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); }
+  .top .wrap { display: flex; align-items: center; gap: 12px; padding-block: 14px; flex-wrap: wrap; }
+  .logo { width: 38px; height: 38px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; flex: none; }
+  .logo svg { width: 22px; height: 22px; }
+  .brand { flex: 1; min-width: 0; }
+  .brand h1 { font-size: 1.15rem; }
+  .status { display: inline-flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted);
+            background: var(--surface-2); border: 1px solid var(--line); padding: 5px 10px; border-radius: 99px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pos); flex: none; }
+
+  /* Pestañas */
+  .tabs { display: flex; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line);
+          border-radius: 12px; margin-block: 18px 16px; overflow-x: auto; }
+  .tab { flex: 1; min-width: max-content; border: 0; background: transparent; color: var(--muted); font: 600 .9rem var(--body);
+         padding: 10px 14px; border-radius: 9px; cursor: pointer; min-height: 44px; }
+  @media (max-width: 520px) { .tab { min-width: 0; padding: 8px 6px; font-size: .84rem; line-height: 1.2; } }
+  .tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .panel { padding-bottom: 40px; }
+
+  .grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; }
+  .grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 880px) { .grid, .grid-2 { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; box-shadow: var(--shadow); min-width: 0; }
+  .card-head { display: grid; gap: 4px; }
+  .stack { display: grid; gap: 18px; }
+
+  /* Ejemplos rápidos */
+  .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 99px;
+          padding: 8px 14px; font: 500 .85rem var(--body); cursor: pointer; min-height: 40px; }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+
+  /* Controles */
+  .control { display: grid; gap: 8px; }
+  .control-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .control label, .control .label { font-weight: 600; font-size: .9rem; }
+  .hint { font-size: .78rem; color: var(--muted); }
+  .stepper { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; border: 1px solid var(--line);
+             border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+  .stepper button { height: 48px; border: 0; background: transparent; color: var(--accent); font-size: 1.4rem; cursor: pointer; }
+  .stepper button:hover { background: var(--accent-soft); }
+  .stepper button:disabled { color: var(--line); cursor: not-allowed; background: transparent; }
+  .stepper output { text-align: center; font: 700 1.15rem var(--display); }
+  .range-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 12px; align-items: center; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; margin: 0; }
+  .unit-input { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); padding-right: 10px; }
+  .unit-input input { width: 100%; min-width: 0; border: 0; background: transparent; color: var(--ink); font: 600 1rem var(--body);
+                      padding: 10px 6px 10px 10px; text-align: right; }
+  .unit-input span { color: var(--muted); font-size: .82rem; }
+  .ticks { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); margin-top: -4px; padding-right: 108px; }
+  .segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  @media (max-width: 420px) { .segmented { grid-template-columns: repeat(2, 1fr); } }
+  .segmented button { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 10px;
+                      padding: 10px 6px; font: 500 .86rem var(--body); cursor: pointer; min-height: 44px; }
+  .segmented button[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+  /* Resultado */
+  .result { display: grid; gap: 18px; }
+  .price { font: 800 clamp(2.3rem, 7vw, 3.2rem)/1.1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .facts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .fact { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-size: .82rem; }
+  .fact b { display: block; font-size: .98rem; font-variant-numeric: tabular-nums; }
+  .range-viz { position: relative; height: 10px; border-radius: 99px; background: linear-gradient(90deg, var(--accent-soft), var(--accent), var(--accent-soft)); }
+  .range-viz i { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; border-radius: 50%; background: var(--surface);
+                 border: 4px solid var(--accent); transform: translate(-50%, -50%); }
+  .range-labels { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .bars { display: grid; gap: 10px; }
+  .bar { display: grid; grid-template-columns: minmax(96px, 130px) minmax(0, 1fr) 88px; gap: 10px; align-items: center; font-size: .86rem; }
+  .track { height: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 99px; transition: width .35s ease; }
+  .bar .val { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .methods { display: grid; gap: 10px; }
+  .method { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .method.best { border-color: var(--accent); background: var(--accent-soft); }
+  .method strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; text-align: right; }
+  .badge { font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--line); white-space: nowrap; justify-self: end; }
+  .method.best .badge { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .divider { height: 1px; background: var(--line); }
+  .skeleton { color: transparent !important; background: var(--surface-2); border-radius: 8px; width: fit-content; }
+
+  /* Barra fija en celular */
+  .mobile-bar { display: none; }
+  @media (max-width: 880px) {
+    .mobile-bar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; align-items: center; gap: 12px;
+      background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0,0,0,.08);
+      padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+    .mobile-bar .p { flex: 1; min-width: 0; }
+    .mobile-bar b { font: 800 1.35rem var(--display); font-variant-numeric: tabular-nums; display: block; }
+    .panel { padding-bottom: 110px; }
+  }
+  .btn { border: 0; background: var(--accent); color: var(--accent-ink); font: 600 .95rem var(--body); padding: 12px 18px;
+         border-radius: 12px; cursor: pointer; min-height: 46px; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: var(--accent-soft); color: var(--ink); }
+
+  /* Cómo aprende */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 700px) { .steps { grid-template-columns: 1fr; } }
+  .step { display: grid; gap: 6px; align-content: start; padding: 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+  .step .n { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font: 700 .9rem var(--display); }
   .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 520px) { .vs { grid-template-columns: 1fr; } }
-  .vs div { border-radius: 10px; padding: 14px; font-size: .88rem; }
-  .vs h3 { margin: 0 0 6px; font-size: .95rem; }
-  .vs code { background: rgba(0,0,0,.06); padding: 2px 5px; border-radius: 4px; font-size: .82rem; }
-  .learn li { margin: 6px 0; }
-  .msg { margin-top: 10px; font-size: .88rem; }
-  .form-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  @media (max-width: 520px) { .form-mini { grid-template-columns: 1fr 1fr; } }
+  .vs > div { border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; font-size: .9rem; }
+  .vs .old { background: var(--neg-soft); } .vs .new { background: var(--accent-soft); }
+  code { font-family: var(--mono); font-size: .82rem; background: var(--surface-2); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; width: fit-content; }
+  .score { display: grid; gap: 12px; }
+  .score-row { display: grid; grid-template-columns: 120px minmax(0, 1fr) 52px; gap: 10px; align-items: center; font-size: .88rem; }
+  .learned { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .learned div { padding: 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+  .learned b { display: block; font: 700 1.15rem var(--display); font-variant-numeric: tabular-nums; }
   .chart-box { position: relative; height: 300px; }
-  footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 24px; }
+  pre { margin: 0; background: #0f1d1b; color: #d8ece8; border-radius: 12px; padding: 16px; overflow-x: auto; font: .8rem/1.6 var(--mono); }
+  pre .c { color: #7f9d97; } pre .k { color: #f2c46d; } pre .s { color: #8fe0b4; }
+
+  /* Registrar venta */
+  .form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 560px) { .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .f { display: grid; gap: 6px; align-content: start; }
+  .f label { font-weight: 600; font-size: .85rem; }
+  .f input, .f select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+                        background: var(--surface-2); color: var(--ink); font: 500 .95rem var(--body); min-height: 46px; }
+  .f input[aria-invalid="true"] { border-color: var(--neg); }
+  .f .err { color: var(--neg); font-size: .76rem; min-height: 1.1em; }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th, td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+  td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.new td { background: var(--accent-soft); }
+  .callout { padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-size: .88rem; }
+  .callout.warn { background: var(--neg-soft); }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0;
+           background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 12px; font-weight: 500; z-index: 30;
+           transition: .25s; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 880px) { .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); } }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; padding-block: 8px 28px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
-</head>
-<body>
-<header>
-  <div class="wrap">
-    <div style="flex:1">
-      <h1>🏠 Tasador IA de Viviendas</h1>
-      <p>Estima el precio de una casa con Machine Learning (Python + Scikit-learn)</p>
-    </div>
-    <span class="tag" id="tagDatos">Cargando modelo…</span>
+{% if not preview %}</head>
+<body>{% endif %}
+
+<header class="top"><div class="wrap">
+  <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-ink)"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></div>
+  <div class="brand">
+    <h1>Tasador IA de Viviendas</h1>
+    <p class="muted small">Python · Scikit-learn · Regresión lineal</p>
   </div>
-</header>
+  <span class="status"><span class="dot"></span><span id="statusText">Cargando modelo…</span></span>
+</div></header>
 
-<main class="wrap">
-  <div class="grid">
-    <!-- FORMULARIO -->
-    <section class="card">
-      <h2>Datos de la vivienda</h2>
-      <p class="sub">Mueve los controles y el modelo calcula el precio al instante.</p>
-      <form id="formCasa">
-        <div class="field"><label>Habitaciones</label>
-          <div class="row"><input type="range" name="habitaciones" min="1" max="8" value="3"><span class="val" data-for="habitaciones"></span></div></div>
-        <div class="field"><label>Metros cuadrados</label>
-          <div class="row"><input type="range" name="metros2" min="30" max="300" step="5" value="100"><span class="val" data-for="metros2" data-suf=" m²"></span></div></div>
-        <div class="field"><label>Baños</label>
-          <div class="row"><input type="range" name="banos" min="1" max="5" value="2"><span class="val" data-for="banos"></span></div></div>
-        <div class="field"><label>Antigüedad (años)</label>
-          <div class="row"><input type="range" name="antiguedad" min="0" max="50" value="10"><span class="val" data-for="antiguedad" data-suf=" años"></span></div></div>
-        <div class="field"><label>Zona</label>
-          <select name="zona">{% for z in zonas %}<option>{{ z }}</option>{% endfor %}</select></div>
-      </form>
-    </section>
+<div class="wrap">
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab" role="tab" id="t-estimar" aria-controls="estimar" aria-selected="true">Estimar precio</button>
+    <button class="tab" role="tab" id="t-aprende" aria-controls="aprende" aria-selected="false">Cómo aprende</button>
+    <button class="tab" role="tab" id="t-registrar" aria-controls="registrar" aria-selected="false">Registrar venta</button>
+  </nav>
 
-    <!-- RESULTADO -->
-    <section class="card">
-      <h2>Precio estimado por la IA</h2>
-      <div class="precio" id="precio">—</div>
-      <div class="rango" id="rango"></div>
+  <!-- ============ ESTIMAR ============ -->
+  <section class="panel" id="estimar" role="tabpanel" aria-labelledby="t-estimar">
+    <div class="grid">
+      <div class="card stack">
+        <div class="card-head">
+          <h2>Describe la vivienda</h2>
+          <p class="muted small">El precio se actualiza mientras cambias los datos.</p>
+        </div>
+        <div class="control">
+          <span class="eyebrow">Ejemplos rápidos</span>
+          <div class="presets" id="presets">
+            <button class="chip" data-p='{"habitaciones":1,"metros2":50,"banos":1,"antiguedad":25,"zona":"Sur"}'>Departamento pequeño</button>
+            <button class="chip" data-p='{"habitaciones":3,"metros2":100,"banos":2,"antiguedad":10,"zona":"Norte"}'>Casa familiar</button>
+            <button class="chip" data-p='{"habitaciones":5,"metros2":220,"banos":4,"antiguedad":2,"zona":"Residencial"}'>Casa amplia nueva</button>
+          </div>
+        </div>
+        <div class="divider"></div>
 
-      <div class="comp">
-        <div><small>Programación tradicional<br>(regla fija: $30 000 × hab.)</small><strong id="pRegla">—</strong></div>
-        <div><small>IA con 1 variable<br>(tu código original)</small><strong id="pSimple">—</strong></div>
-        <div class="best"><small>IA con 5 variables<br>(modelo completo)</small><strong id="pCompleto">—</strong></div>
+        <div class="control">
+          <div class="control-head"><span class="label" id="l-hab">Habitaciones</span><span class="hint">1 a 8</span></div>
+          <div class="stepper" role="group" aria-labelledby="l-hab">
+            <button type="button" data-step="habitaciones" data-d="-1" aria-label="Quitar una habitación">−</button>
+            <output id="o-habitaciones" aria-live="polite">3</output>
+            <button type="button" data-step="habitaciones" data-d="1" aria-label="Agregar una habitación">+</button>
+          </div>
+        </div>
+        <div class="control">
+          <div class="control-head"><span class="label" id="l-ban">Baños</span><span class="hint">1 a 5</span></div>
+          <div class="stepper" role="group" aria-labelledby="l-ban">
+            <button type="button" data-step="banos" data-d="-1" aria-label="Quitar un baño">−</button>
+            <output id="o-banos" aria-live="polite">2</output>
+            <button type="button" data-step="banos" data-d="1" aria-label="Agregar un baño">+</button>
+          </div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="metros2">Superficie</label><span class="hint">30 a 300 m²</span></div>
+          <div class="range-row">
+            <input type="range" id="metros2" min="30" max="300" step="5" value="100">
+            <div class="unit-input"><input id="metros2-n" type="number" inputmode="numeric" min="30" max="300" value="100" aria-label="Superficie en metros cuadrados"><span>m²</span></div>
+          </div>
+          <div class="ticks" aria-hidden="true"><span>30</span><span>165</span><span>300</span></div>
+        </div>
+        <div class="control">
+          <div class="control-head"><label for="antiguedad">Antigüedad</label><span class="hint">0 = a estrenar</span></div>
+          <div class="range-row">
+            <input type="range" id="antiguedad" min="0" max="50" value="10">
+            <div class="unit-input"><input id="antiguedad-n" type="number" inputmode="numeric" min="0" max="50" value="10" aria-label="Antigüedad en años"><span>años</span></div>
+          </div>
+          <div class="ticks" aria-hidden="true"><span>Nueva</span><span>25</span><span>50</span></div>
+        </div>
+        <div class="control">
+          <span class="label" id="l-zona">Zona</span>
+          <div class="segmented" role="radiogroup" aria-labelledby="l-zona" id="zonas">
+            {% for z in zonas %}<button type="button" role="radio" aria-checked="{{ 'true' if loop.first else 'false' }}" data-zona="{{ z }}">{{ z }}</button>{% endfor %}
+          </div>
+        </div>
       </div>
 
-      <h2 style="font-size:1rem">¿De dónde sale el precio?</h2>
-      <p class="sub">Aporte de cada característica según lo que aprendió el modelo.</p>
-      <div id="desglose"></div>
-    </section>
-  </div>
-
-  <div class="grid-2">
-    <!-- TRADICIONAL VS IA -->
-    <section class="card">
-      <h2>Programación tradicional vs. Inteligencia Artificial</h2>
-      <p class="sub">La diferencia clave del tema.</p>
-      <div class="vs">
-        <div style="background:#fff4e8">
-          <h3>📏 Tradicional</h3>
-          El programador <b>escribe la regla</b>:<br><code>precio = 30000 * habitaciones</code><br><br>
-          Si el mercado cambia, hay que reescribir el código a mano.
+      <div class="card result" id="resultado">
+        <div class="card-head">
+          <span class="eyebrow">Precio estimado por la IA</span>
+          <div class="price skeleton" id="precio" aria-live="polite">$000.000</div>
         </div>
-        <div style="background:var(--primary-soft)">
-          <h3>🤖 Machine Learning</h3>
-          Le damos <b>ejemplos</b> (ventas pasadas) y el modelo <b>descubre la regla</b>:<br><code>modelo.fit(X, precios)</code><br><br>
-          Si llegan datos nuevos, solo se reentrena.
+        <div>
+          <div class="range-viz" aria-hidden="true"><i></i></div>
+          <div class="range-labels num"><span id="rMin">—</span><span>Rango probable</span><span id="rMax">—</span></div>
         </div>
-      </div>
-      <h2 style="font-size:1rem;margin-top:18px">¿Qué tan bien acierta cada enfoque?</h2>
-      <p class="sub" id="subMetricas">Evaluado con casas que el modelo nunca vio.</p>
-      <table>
-        <thead><tr><th>Enfoque</th><th class="n">Error promedio</th><th class="n">R²</th></tr></thead>
-        <tbody id="tablaMetricas"></tbody>
-      </table>
-      <p class="sub" style="margin-top:10px">R² = 1 es perfecto; cerca de 0 o negativo es malo.</p>
-    </section>
-
-    <!-- LO QUE APRENDIÓ -->
-    <section class="card">
-      <h2>¿Qué aprendió el modelo?</h2>
-      <p class="sub">Coeficientes descubiertos por <code>LinearRegression</code> a partir de los datos.</p>
-      <ul class="learn" id="aprendido"></ul>
-      <div class="chart-box"><canvas id="grafico"></canvas></div>
-    </section>
-  </div>
-
-  <!-- NUEVA VENTA -->
-  <section class="card" style="margin-top:20px">
-    <h2>Registrar una venta real y reentrenar</h2>
-    <p class="sub">Agrega una casa vendida: se guarda en <code>datos/casas.csv</code> y el modelo vuelve a aprender con ella.</p>
-    <div class="grid-2" style="margin-top:0">
-      <form id="formVenta">
-        <div class="form-mini">
-          <div><label>Habitaciones</label><input type="number" name="habitaciones" min="1" max="10" value="3" required></div>
-          <div><label>m²</label><input type="number" name="metros2" min="15" max="1000" value="110" required></div>
-          <div><label>Baños</label><input type="number" name="banos" min="1" max="6" value="2" required></div>
-          <div><label>Antigüedad</label><input type="number" name="antiguedad" min="0" max="100" value="5" required></div>
-          <div><label>Zona</label><select name="zona">{% for z in zonas %}<option>{{ z }}</option>{% endfor %}</select></div>
-          <div><label>Precio venta ($)</label><input type="number" name="precio" min="5000" step="100" value="135000" required></div>
+        <div class="facts">
+          <div class="fact"><span class="muted">Precio por m²</span><b id="porM2">—</b></div>
+          <div class="fact"><span class="muted">Margen de error</span><b id="margen">—</b></div>
         </div>
-        <button style="margin-top:14px">Guardar venta y reentrenar modelo</button>
-        <div class="msg" id="msgVenta"></div>
-      </form>
-      <div>
-        <label>Últimas ventas en el dataset</label>
-        <table>
-          <thead><tr><th>Hab.</th><th>m²</th><th>Baños</th><th>Años</th><th>Zona</th><th class="n">Precio</th></tr></thead>
-          <tbody id="tablaUltimas"></tbody>
-        </table>
+        <div class="divider"></div>
+        <div class="stack" style="gap:12px">
+          <div class="card-head"><h3>¿De dónde sale este precio?</h3><p class="muted small">Lo que suma o resta cada característica, según lo que aprendió el modelo.</p></div>
+          <div class="bars" id="desglose"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="stack" style="gap:12px">
+          <div class="card-head"><h3>Tres formas de calcularlo</h3><p class="muted small">La misma casa con distintos métodos. El error se midió en casas de prueba.</p></div>
+          <div class="methods" id="metodos"></div>
+        </div>
       </div>
     </div>
   </section>
-</main>
-<footer>Proyecto académico · Tema 2: Python y los Fundamentos de la IA · Flask + Scikit-learn</footer>
 
+  <!-- ============ CÓMO APRENDE ============ -->
+  <section class="panel" id="aprende" role="tabpanel" aria-labelledby="t-aprende" hidden>
+    <div class="stack">
+      <div class="card stack">
+        <div class="card-head"><h2>Del dato a la predicción</h2><p class="muted small">Lo que hace el programa en Python, paso a paso.</p></div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span><h3>Datos</h3><p class="small muted" id="paso1">Lee las ventas de casas desde <code>datos/casas.csv</code>.</p></div>
+          <div class="step"><span class="n">2</span><h3>Entrenamiento</h3><p class="small muted">Usa el 80 % para aprender con <code>modelo.fit()</code> y guarda el 20 % para comprobar.</p></div>
+          <div class="step"><span class="n">3</span><h3>Predicción</h3><p class="small muted">Con lo aprendido calcula el precio de una casa nueva con <code>modelo.predict()</code>.</p></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card stack">
+          <div class="card-head"><h2>Programación tradicional vs. IA</h2></div>
+          <div class="vs">
+            <div class="old"><h3>Tradicional</h3><p>Una persona <b>escribe la regla</b>.</p><code>precio = 30000 * hab</code><p class="small muted">Si el mercado cambia, hay que reescribir el código.</p></div>
+            <div class="new"><h3>Machine Learning</h3><p>El modelo <b>descubre la regla</b> con ejemplos.</p><code>modelo.fit(X, y)</code><p class="small muted">Si llegan datos nuevos, solo se reentrena.</p></div>
+          </div>
+          <div class="stack" style="gap:10px">
+            <div class="card-head"><h3>¿Cuánto acierta cada uno?</h3>
+            <p class="muted small" id="subScore">Porcentaje del precio que logra explicar (R²) en casas que nunca vio.</p></div>
+            <div class="score" id="score"></div>
+          </div>
+        </div>
+        <div class="card stack">
+          <div class="card-head"><h2>Lo que aprendió el modelo</h2><p class="muted small">Valores que encontró <code>LinearRegression</code> por sí solo, a partir de los datos.</p></div>
+          <div class="learned" id="aprendido"></div>
+          <div class="chart-box"><canvas id="grafico" role="img" aria-label="Precio según número de habitaciones, con la línea aprendida por la IA y la regla fija"></canvas></div>
+        </div>
+      </div>
+      <div class="card stack">
+        <div class="card-head"><h2>El código en Python</h2><p class="muted small">El núcleo de <code>app.py</code>.</p></div>
+<pre><span class="k">from</span> sklearn.linear_model <span class="k">import</span> LinearRegression
+<span class="k">from</span> sklearn.model_selection <span class="k">import</span> train_test_split
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+df = pd.read_csv(<span class="s">"datos/casas.csv"</span>)
+X = df[[<span class="s">"habitaciones"</span>, <span class="s">"metros2"</span>, <span class="s">"banos"</span>, <span class="s">"antiguedad"</span>, <span class="s">"zona"</span>]]
+y = df[<span class="s">"precio"</span>]
+
+<span class="c"># 80 % para aprender, 20 % para comprobar con casas que nunca vio</span>
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=<span class="s">0.2</span>, random_state=<span class="s">42</span>)
+
+modelo = crear_modelo()      <span class="c"># Pipeline: zona (texto) -> números + LinearRegression</span>
+modelo.fit(X_tr, y_tr)       <span class="c"># el modelo APRENDE de los datos</span>
+print(r2_score(y_te, modelo.predict(X_te)))
+
+casa = pd.DataFrame([{<span class="s">"habitaciones"</span>: 3, <span class="s">"metros2"</span>: 100, <span class="s">"banos"</span>: 2,
+                      <span class="s">"antiguedad"</span>: 10, <span class="s">"zona"</span>: <span class="s">"Norte"</span>}])
+print(modelo.predict(casa))  <span class="c"># precio estimado</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRAR VENTA ============ -->
+  <section class="panel" id="registrar" role="tabpanel" aria-labelledby="t-registrar" hidden>
+    <div class="grid">
+      <form class="card stack" id="formVenta" novalidate>
+        <div class="card-head"><h2>Registrar una venta real</h2><p class="muted small">La venta se guarda y el modelo vuelve a aprender con ella.</p></div>
+        {% if preview %}<div class="callout warn" role="note">En esta vista previa no se puede reentrenar, porque el modelo vive en Python. Ejecuta <code>python app.py</code> para usar esta función.</div>{% endif %}
+        <div class="form-grid">
+          <div class="f"><label for="v-hab">Habitaciones</label><input id="v-hab" name="habitaciones" type="number" inputmode="numeric" min="1" max="10" value="3"><span class="err"></span></div>
+          <div class="f"><label for="v-m2">Superficie (m²)</label><input id="v-m2" name="metros2" type="number" inputmode="numeric" min="15" max="1000" value="110"><span class="err"></span></div>
+          <div class="f"><label for="v-ban">Baños</label><input id="v-ban" name="banos" type="number" inputmode="numeric" min="1" max="6" value="2"><span class="err"></span></div>
+          <div class="f"><label for="v-ant">Antigüedad (años)</label><input id="v-ant" name="antiguedad" type="number" inputmode="numeric" min="0" max="100" value="5"><span class="err"></span></div>
+          <div class="f"><label for="v-zona">Zona</label><select id="v-zona" name="zona">{% for z in zonas %}<option>{{ z }}</option>{% endfor %}</select><span class="err"></span></div>
+          <div class="f"><label for="v-precio">Precio de venta ($)</label><input id="v-precio" name="precio" type="number" inputmode="numeric" min="5000" max="5000000" step="100" value="135000"><span class="err"></span></div>
+        </div>
+        <button class="btn" id="btnVenta" {% if preview %}disabled{% endif %}>Guardar venta y reentrenar</button>
+        <div id="antesDespues"></div>
+      </form>
+      <div class="card stack">
+        <div class="card-head"><h2>Últimas ventas del dataset</h2><p class="muted small" id="totalVentas"></p></div>
+        <div class="table-scroll"><table>
+          <thead><tr><th>Hab.</th><th class="r">m²</th><th class="r">Baños</th><th class="r">Años</th><th>Zona</th><th class="r">Precio</th></tr></thead>
+          <tbody id="tablaUltimas"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="mobile-bar" id="mobileBar">
+  <div class="p"><span class="eyebrow">Precio estimado</span><b id="mPrecio">—</b></div>
+  <button class="btn ghost" id="verDetalle">Ver detalle</button>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<footer class="wrap">Proyecto académico · Tema 2: Python y los Fundamentos de la IA</footer>
+
+<script>window.MODELO = {{ modelo|tojson if modelo else 'null' }};</script>
+{% raw %}
 <script>
 const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
 const usd = n => "$" + Math.round(n).toLocaleString("es-ES", {useGrouping: "always"});
-const formCasa = $("#formCasa");
-let grafico, timer;
+const LIMITES = {habitaciones: [1, 8], banos: [1, 5], metros2: [30, 300], antiguedad: [0, 50]};
+const casa = {habitaciones: 3, banos: 2, metros2: 100, antiguedad: 10, zona: "Norte"};
+const sinMovimiento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+let modelo = null, timer, grafico, ultimoPrecio = null, ventaNueva = false;
 
-function datosForm(form) {
-  return Object.fromEntries(new FormData(form).entries());
+/* ---------- Conexión con Python (Flask) ---------- */
+async function obtenerModelo() {
+  if (window.MODELO) return window.MODELO;              // vista previa sin servidor
+  const r = await fetch("/api/modelo");
+  if (!r.ok) throw new Error("No se pudo cargar el modelo");
+  return r.json();
+}
+async function obtenerPrediccion(c) {
+  if (!window.MODELO) {
+    const r = await fetch("/api/predecir", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(c)});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    return d;
+  }
+  // Vista previa: misma fórmula que modelo.predict() con los coeficientes exportados desde Python
+  const k = modelo.coef, mae = modelo.metricas.completo.mae;
+  const desglose = {
+    "Base del modelo": modelo.intercepto, "Habitaciones": k.habitaciones * c.habitaciones,
+    "Metros²": k.metros2 * c.metros2, "Baños": k.banos * c.banos, "Antigüedad": k.antiguedad * c.antiguedad,
+    ["Zona " + c.zona]: k["zona_" + c.zona] || 0,
+  };
+  const precio = Object.values(desglose).reduce((a, b) => a + b, 0);
+  return {precio, rango: [precio - mae, precio + mae], desglose,
+          precio_simple: modelo.simple.intercepto + modelo.simple.pendiente * c.habitaciones,
+          precio_regla: modelo.regla * c.habitaciones};
 }
 
-function pintarValores() {
-  document.querySelectorAll(".val").forEach(el => {
-    el.textContent = formCasa.elements[el.dataset.for].value + (el.dataset.suf || "");
+/* ---------- Pestañas ---------- */
+function abrirTab(id, foco) {
+  $$(".tab").forEach(t => t.setAttribute("aria-selected", t.getAttribute("aria-controls") === id));
+  $$(".panel").forEach(p => p.hidden = p.id !== id);
+  $("#mobileBar").hidden = id !== "estimar";
+  if (id === "aprende") dibujarGrafico();
+  if (foco) $("#t-" + id).focus();
+}
+$$(".tab").forEach((t, i, all) => {
+  t.addEventListener("click", () => abrirTab(t.getAttribute("aria-controls")));
+  t.addEventListener("keydown", e => {
+    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (d) abrirTab(all[(i + d + all.length) % all.length].getAttribute("aria-controls"), true);
   });
-}
-
-async function predecir() {
-  const r = await fetch("/api/predecir", {method: "POST", headers: {"Content-Type": "application/json"},
-                                          body: JSON.stringify(datosForm(formCasa))});
-  const d = await r.json();
-  if (!r.ok) { $("#precio").textContent = "Error"; $("#rango").textContent = d.error; return; }
-  $("#precio").textContent = usd(d.precio);
-  $("#rango").textContent = `Rango probable: ${usd(d.rango[0])} – ${usd(d.rango[1])}`;
-  $("#pRegla").textContent = usd(d.precio_regla);
-  $("#pSimple").textContent = usd(d.precio_simple);
-  $("#pCompleto").textContent = usd(d.precio);
-
-  const max = Math.max(...Object.values(d.desglose).map(Math.abs));
-  $("#desglose").innerHTML = Object.entries(d.desglose).map(([k, v]) => {
-    const w = Math.abs(v) / max * 100, color = v >= 0 ? "var(--ok)" : "var(--warn)";
-    return `<div class="bar"><span>${k}</span><div class="track"><div class="fill" style="left:0;width:${w}%;background:${color}"></div></div>
-            <span class="num" style="color:${color}">${v >= 0 ? "+" : "−"}${usd(Math.abs(v))}</span></div>`;
-  }).join("");
-}
-
-async function cargarModelo() {
-  const d = await (await fetch("/api/modelo")).json();
-  const m = d.metricas, c = d.coef;
-  $("#tagDatos").textContent = `Entrenado con ${d.n_casas} casas`;
-  $("#subMetricas").textContent = `Evaluado con ${d.n_test} casas que el modelo nunca vio (20 % de prueba).`;
-
-  const fila = (nombre, x, best) => `<tr${best ? ' style="font-weight:700"' : ""}><td>${nombre}</td>
-      <td class="n">${usd(x.mae)}</td><td class="n">${x.r2.toFixed(3)}</td></tr>`;
-  $("#tablaMetricas").innerHTML = fila("📏 Regla fija", m.regla) + fila("🤖 IA 1 variable", m.simple)
-                                + fila("🤖 IA 5 variables", m.completo, true);
-
-  $("#aprendido").innerHTML = `
-    <li>Cada <b>habitación</b> suma <b>${usd(c.habitaciones)}</b></li>
-    <li>Cada <b>m²</b> suma <b>${usd(c.metros2)}</b></li>
-    <li>Cada <b>baño</b> suma <b>${usd(c.banos)}</b></li>
-    <li>Cada <b>año de antigüedad</b> resta <b>${usd(-c.antiguedad)}</b></li>
-    <li>Zona vs. Norte: Centro ${usd(c.zona_Centro)}, Sur ${c.zona_Sur < 0 ? "−" + usd(-c.zona_Sur) : usd(c.zona_Sur)}, Residencial ${usd(c.zona_Residencial)}</li>`;
-
-  $("#tablaUltimas").innerHTML = d.ultimas.map(u => `<tr><td>${u.habitaciones}</td><td>${u.metros2}</td>
-      <td>${u.banos}</td><td>${u.antiguedad}</td><td>${u.zona}</td><td class="n">${usd(u.precio)}</td></tr>`).join("");
-
-  // Gráfico: datos reales + línea aprendida (1 variable) + regla fija
-  const s = d.simple, xs = [1, 8];
-  const datasets = [
-    {type: "scatter", label: "Ventas reales", data: d.puntos.map(p => ({x: p.habitaciones + (Math.random() - .5) * .3, y: p.precio})),
-     backgroundColor: "rgba(47,111,237,.35)", pointRadius: 3},
-    {type: "line", label: "Línea aprendida por la IA", data: xs.map(x => ({x, y: s.intercepto + s.pendiente * x})),
-     borderColor: "#1f9d63", borderWidth: 3, pointRadius: 0},
-    {type: "line", label: "Regla fija tradicional", data: xs.map(x => ({x, y: d.regla * x})),
-     borderColor: "#d9822b", borderWidth: 2, borderDash: [6, 4], pointRadius: 0},
-  ];
-  if (grafico) { grafico.data.datasets = datasets; grafico.update(); return; }
-  grafico = new Chart($("#grafico"), {
-    data: {datasets},
-    options: {maintainAspectRatio: false, animation: false,
-      plugins: {legend: {position: "bottom", labels: {boxWidth: 12}}},
-      scales: {x: {type: "linear", min: 0.5, max: 8, title: {display: true, text: "Habitaciones"}},
-               y: {title: {display: true, text: "Precio ($)"}, ticks: {callback: v => "$" + v / 1000 + "k"}}}}
-  });
-}
-
-formCasa.addEventListener("input", () => { pintarValores(); clearTimeout(timer); timer = setTimeout(predecir, 120); });
-
-$("#formVenta").addEventListener("submit", async e => {
-  e.preventDefault();
-  const r = await fetch("/api/agregar", {method: "POST", headers: {"Content-Type": "application/json"},
-                                         body: JSON.stringify(datosForm(e.target))});
-  const d = await r.json();
-  $("#msgVenta").innerHTML = r.ok ? `✅ Venta guardada. Modelo reentrenado con <b>${d.n_casas}</b> casas.`
-                                  : `❌ ${d.error}`;
-  if (r.ok) { await cargarModelo(); predecir(); }
 });
 
-pintarValores();
-cargarModelo().then(predecir);
+/* ---------- Controles ---------- */
+function sincronizar() {
+  for (const k of ["habitaciones", "banos"]) {
+    $("#o-" + k).textContent = casa[k];
+    $$(`[data-step="${k}"]`).forEach(b => b.disabled = (+b.dataset.d < 0 && casa[k] <= LIMITES[k][0]) || (+b.dataset.d > 0 && casa[k] >= LIMITES[k][1]));
+  }
+  for (const k of ["metros2", "antiguedad"]) { $("#" + k).value = casa[k]; $("#" + k + "-n").value = casa[k]; }
+  $$("#zonas button").forEach(b => { const on = b.dataset.zona === casa.zona; b.setAttribute("aria-checked", on); b.tabIndex = on ? 0 : -1; });
+  $$("#presets .chip").forEach(b => {
+    const p = JSON.parse(b.dataset.p);
+    b.setAttribute("aria-pressed", Object.keys(p).every(k => p[k] === casa[k]));
+  });
+}
+function cambiar(k, v) {
+  if (k !== "zona") { const [a, b] = LIMITES[k]; v = Math.min(b, Math.max(a, Math.round(+v || a))); }
+  casa[k] = v; sincronizar(); clearTimeout(timer); timer = setTimeout(actualizar, 90);
+}
+$$("[data-step]").forEach(b => b.addEventListener("click", () => cambiar(b.dataset.step, casa[b.dataset.step] + +b.dataset.d)));
+for (const k of ["metros2", "antiguedad"]) {
+  $("#" + k).addEventListener("input", e => cambiar(k, e.target.value));
+  $("#" + k + "-n").addEventListener("change", e => cambiar(k, e.target.value));
+}
+$$("#zonas button").forEach((b, i, all) => {
+  b.addEventListener("click", () => cambiar("zona", b.dataset.zona));
+  b.addEventListener("keydown", e => {
+    const d = ["ArrowRight", "ArrowDown"].includes(e.key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(e.key) ? -1 : 0;
+    if (d) { e.preventDefault(); const n = all[(i + d + all.length) % all.length]; cambiar("zona", n.dataset.zona); n.focus(); }
+  });
+});
+$$("#presets .chip").forEach(b => b.addEventListener("click", () => { Object.assign(casa, JSON.parse(b.dataset.p)); sincronizar(); actualizar(); }));
+$("#verDetalle").addEventListener("click", () => $("#resultado").scrollIntoView({behavior: sinMovimiento() ? "auto" : "smooth"}));
+
+/* ---------- Resultado ---------- */
+function animarPrecio(el, hasta) {
+  const desde = ultimoPrecio ?? hasta, t0 = performance.now(), dur = sinMovimiento() ? 0 : 350;
+  const paso = t => { const p = dur ? Math.min(1, (t - t0) / dur) : 1; el.textContent = usd(desde + (hasta - desde) * (1 - (1 - p) ** 3)); if (p < 1) requestAnimationFrame(paso); };
+  requestAnimationFrame(paso);
+}
+async function actualizar() {
+  let d;
+  try { d = await obtenerPrediccion(casa); }
+  catch (e) { $("#precio").textContent = "Sin conexión"; aviso("No se pudo calcular el precio. Revisa que app.py siga ejecutándose."); return; }
+  $("#precio").classList.remove("skeleton");
+  animarPrecio($("#precio"), d.precio); $("#mPrecio").textContent = usd(d.precio); ultimoPrecio = d.precio;
+  $("#rMin").textContent = usd(d.rango[0]); $("#rMax").textContent = usd(d.rango[1]);
+  $("#porM2").textContent = usd(d.precio / casa.metros2);
+  $("#margen").textContent = "± " + usd((d.rango[1] - d.rango[0]) / 2);
+
+  const max = Math.max(...Object.values(d.desglose).map(Math.abs)) || 1;
+  $("#desglose").innerHTML = Object.entries(d.desglose).map(([n, v]) => {
+    const col = v >= 0 ? "var(--pos)" : "var(--neg)";
+    return `<div class="bar"><span>${n}</span><div class="track"><div class="fill" style="width:${Math.abs(v) / max * 100}%;background:${col}"></div></div>
+            <span class="val" style="color:${col}">${v >= 0 ? "+" : "−"}${usd(Math.abs(v))}</span></div>`;
+  }).join("");
+
+  const m = modelo.metricas;
+  const metodos = [
+    ["Regla fija", "Programación tradicional: $30.000 por habitación", d.precio_regla, m.regla.mae],
+    ["IA · 1 variable", "Solo mira las habitaciones (código original)", d.precio_simple, m.simple.mae],
+    ["IA · 5 variables", "Habitaciones, m², baños, antigüedad y zona", d.precio, m.completo.mae, true],
+  ];
+  $("#metodos").innerHTML = metodos.map(([t, s, p, e, best]) => `<div class="method${best ? " best" : ""}">
+      <div><b>${t}</b><div class="small muted">${s}</div></div><strong>${usd(p)}</strong>
+      <span class="small muted">Se equivoca en promedio ${usd(e)}</span><span class="badge">${best ? "Más preciso" : "± " + usd(e)}</span></div>`).join("");
+}
+
+/* ---------- Cómo aprende ---------- */
+function pintarModelo() {
+  const m = modelo.metricas, c = modelo.coef;
+  $("#statusText").textContent = `Modelo entrenado · ${modelo.n_casas} casas · acierta ${Math.round(m.completo.r2 * 100)} %`;
+  $("#paso1").innerHTML = `Lee <b>${modelo.n_casas} ventas</b> de casas desde <code>datos/casas.csv</code>.`;
+  $("#subScore").textContent = `Porcentaje del precio que logra explicar (R²), medido en ${modelo.n_test} casas que nunca vio.`;
+  $("#score").innerHTML = [["Regla fija", m.regla, "var(--neg)"], ["IA · 1 variable", m.simple, "var(--muted)"], ["IA · 5 variables", m.completo, "var(--accent)"]]
+    .map(([n, x, col]) => `<div class="score-row"><span>${n}</span><div class="track"><div class="fill" style="width:${Math.max(0, x.r2) * 100}%;background:${col}"></div></div>
+      <b class="num" style="text-align:right">${Math.round(x.r2 * 100)} %</b></div>`).join("");
+  const sg = v => (v < 0 ? "−" : "+") + usd(Math.abs(v));
+  $("#aprendido").innerHTML = [
+    ["Por habitación", sg(c.habitaciones)], ["Por m²", sg(c.metros2)], ["Por baño", sg(c.banos)],
+    ["Por año de antigüedad", sg(c.antiguedad)], ["Zona Centro vs. Norte", sg(c.zona_Centro)],
+    ["Zona Residencial vs. Norte", sg(c.zona_Residencial)],
+  ].map(([t, v]) => `<div><span class="small muted">${t}</span><b>${v}</b></div>`).join("");
+  $("#totalVentas").textContent = `${modelo.n_casas} ventas en total. Se muestran las 8 más recientes.`;
+  $("#tablaUltimas").innerHTML = modelo.ultimas.map((u, i) => `<tr${i === 0 && ventaNueva ? ' class="new"' : ""}><td>${u.habitaciones}</td>
+      <td class="r">${u.metros2}</td><td class="r">${u.banos}</td><td class="r">${u.antiguedad}</td><td>${u.zona}</td><td class="r">${usd(u.precio)}</td></tr>`).join("");
+  if (grafico) { grafico.destroy(); grafico = null; }
+  if (!$("#aprende").hidden) dibujarGrafico();
+}
+function dibujarGrafico() {
+  if (grafico || !window.Chart || !modelo) return;
+  const css = getComputedStyle(document.documentElement), tok = n => css.getPropertyValue(n).trim();
+  Chart.defaults.color = tok("--muted"); Chart.defaults.borderColor = tok("--line"); Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+  const s = modelo.simple;
+  grafico = new Chart($("#grafico"), {
+    data: {datasets: [
+      {type: "scatter", label: "Ventas reales", data: modelo.puntos.map((p, i) => ({x: p.habitaciones + ((i * 37) % 11 - 5) * .03, y: p.precio})),
+       backgroundColor: tok("--accent") + "55", pointRadius: 3},
+      {type: "line", label: "Lo que aprendió la IA", data: [1, 8].map(x => ({x, y: s.intercepto + s.pendiente * x})), borderColor: tok("--accent"), borderWidth: 3, pointRadius: 0},
+      {type: "line", label: "Regla fija", data: [1, 8].map(x => ({x, y: modelo.regla * x})), borderColor: tok("--neg"), borderWidth: 2, borderDash: [6, 4], pointRadius: 0},
+    ]},
+    options: {maintainAspectRatio: false, animation: false, plugins: {legend: {position: "bottom", labels: {boxWidth: 12}}},
+      scales: {x: {type: "linear", min: .5, max: 8, title: {display: true, text: "Habitaciones"}},
+               y: {title: {display: true, text: "Precio"}, ticks: {callback: v => "$" + v / 1000 + "k"}}}}
+  });
+}
+
+/* ---------- Registrar venta ---------- */
+function validar(form) {
+  let ok = true;
+  form.querySelectorAll("input").forEach(inp => {
+    const v = +inp.value, err = inp.parentElement.querySelector(".err");
+    const malo = inp.value === "" || v < +inp.min || v > +inp.max;
+    inp.setAttribute("aria-invalid", malo);
+    err.textContent = malo ? `Entre ${(+inp.min).toLocaleString("es-ES", {useGrouping: "always"})} y ${(+inp.max).toLocaleString("es-ES", {useGrouping: "always"})}` : "";
+    if (malo && ok) { inp.focus(); ok = false; }
+  });
+  return ok;
+}
+$("#formVenta").addEventListener("submit", async e => {
+  e.preventDefault();
+  const form = e.target, btn = $("#btnVenta");
+  if (window.MODELO || !validar(form)) return;
+  const datos = Object.fromEntries(new FormData(form)), antes = ultimoPrecio;
+  btn.disabled = true; btn.textContent = "Reentrenando…";
+  try {
+    const r = await fetch("/api/agregar", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(datos)});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    modelo = await obtenerModelo(); ventaNueva = true; pintarModelo(); await actualizar();
+    $("#antesDespues").innerHTML = `<div class="callout" role="status"><b>Modelo reentrenado con ${d.n_casas} casas.</b><br>
+      La casa que tienes en "Estimar precio" pasó de ${usd(antes)} a ${usd(ultimoPrecio)}.</div>`;
+    aviso("Venta guardada");
+  } catch (err) { aviso("No se guardó: " + err.message); }
+  finally { btn.disabled = false; btn.textContent = "Guardar venta y reentrenar"; }
+});
+
+let toastT;
+function aviso(txt) { const t = $("#toast"); t.textContent = txt; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ---------- Inicio ---------- */
+sincronizar();
+obtenerModelo().then(m => { modelo = m; pintarModelo(); actualizar(); })
+  .catch(() => { $("#statusText").textContent = "Sin conexión con Python"; $(".dot").style.background = "var(--neg)"; aviso("Ejecuta python app.py y recarga la página."); });
 </script>
-</body>
-</html>
+{% endraw %}
+{% if not preview %}</body>
+</html>{% endif %}
