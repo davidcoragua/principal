@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasador IA de Viviendas</title>
+<script src="{{ url_for('static', filename='chart.umd.min.js') }}"></script>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #fff; --text: #1d2433; --muted: #6b7385; --line: #e3e7ef;
+    --primary: #2f6fed; --primary-soft: #e8f0ff; --ok: #1f9d63; --warn: #d9822b; --gray: #8a93a6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.45; }
+  header { background: linear-gradient(120deg, #1c3f94, #2f6fed); color: #fff; padding: 28px 16px; }
+  header .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 1.7rem; }
+  header p { margin: 4px 0 0; opacity: .85; }
+  .tag { background: rgba(255,255,255,.18); padding: 4px 10px; border-radius: 99px; font-size: .8rem; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  main { padding: 24px 0 48px; }
+  .grid { display: grid; gap: 20px; grid-template-columns: 1fr 1.25fr; }
+  .grid-2 { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; margin-top: 20px; }
+  @media (max-width: 860px) { .grid, .grid-2 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .card h2 { margin: 0 0 4px; font-size: 1.1rem; }
+  .card .sub { color: var(--muted); font-size: .88rem; margin: 0 0 16px; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; }
+  .field { margin-bottom: 14px; }
+  .row { display: flex; gap: 10px; align-items: center; }
+  input[type=range] { flex: 1; accent-color: var(--primary); }
+  input[type=number], select { width: 100%; padding: 9px 10px; border: 1px solid var(--line);
+         border-radius: 8px; font-size: .95rem; background: #fff; }
+  .val { min-width: 64px; text-align: right; font-weight: 700; color: var(--primary); }
+  button { background: var(--primary); color: #fff; border: 0; border-radius: 8px; padding: 11px 16px;
+           font-size: .95rem; font-weight: 600; cursor: pointer; width: 100%; }
+  button:hover { filter: brightness(1.08); }
+  .precio { font-size: 2.6rem; font-weight: 800; margin: 4px 0; color: var(--primary); }
+  .rango { color: var(--muted); font-size: .9rem; }
+  .comp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+  @media (max-width: 520px) { .comp { grid-template-columns: 1fr; } }
+  .comp div { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+  .comp small { color: var(--muted); display: block; font-size: .75rem; }
+  .comp strong { font-size: 1.1rem; }
+  .comp .best { border-color: var(--primary); background: var(--primary-soft); }
+  .bar { display: grid; grid-template-columns: 130px 1fr 90px; gap: 8px; align-items: center;
+         font-size: .85rem; margin: 6px 0; }
+  .bar .track { height: 10px; background: var(--line); border-radius: 99px; position: relative; overflow: hidden; }
+  .bar .fill { position: absolute; top: 0; bottom: 0; border-radius: 99px; }
+  .bar .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th, td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .pill { padding: 2px 8px; border-radius: 99px; font-size: .78rem; font-weight: 600; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .vs { grid-template-columns: 1fr; } }
+  .vs div { border-radius: 10px; padding: 14px; font-size: .88rem; }
+  .vs h3 { margin: 0 0 6px; font-size: .95rem; }
+  .vs code { background: rgba(0,0,0,.06); padding: 2px 5px; border-radius: 4px; font-size: .82rem; }
+  .learn li { margin: 6px 0; }
+  .msg { margin-top: 10px; font-size: .88rem; }
+  .form-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 520px) { .form-mini { grid-template-columns: 1fr 1fr; } }
+  .chart-box { position: relative; height: 300px; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div style="flex:1">
+      <h1>🏠 Tasador IA de Viviendas</h1>
+      <p>Estima el precio de una casa con Machine Learning (Python + Scikit-learn)</p>
+    </div>
+    <span class="tag" id="tagDatos">Cargando modelo…</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+    <!-- FORMULARIO -->
+    <section class="card">
+      <h2>Datos de la vivienda</h2>
+      <p class="sub">Mueve los controles y el modelo calcula el precio al instante.</p>
+      <form id="formCasa">
+        <div class="field"><label>Habitaciones</label>
+          <div class="row"><input type="range" name="habitaciones" min="1" max="8" value="3"><span class="val" data-for="habitaciones"></span></div></div>
+        <div class="field"><label>Metros cuadrados</label>
+          <div class="row"><input type="range" name="metros2" min="30" max="300" step="5" value="100"><span class="val" data-for="metros2" data-suf=" m²"></span></div></div>
+        <div class="field"><label>Baños</label>
+          <div class="row"><input type="range" name="banos" min="1" max="5" value="2"><span class="val" data-for="banos"></span></div></div>
+        <div class="field"><label>Antigüedad (años)</label>
+          <div class="row"><input type="range" name="antiguedad" min="0" max="50" value="10"><span class="val" data-for="antiguedad" data-suf=" años"></span></div></div>
+        <div class="field"><label>Zona</label>
+          <select name="zona">{% for z in zonas %}<option>{{ z }}</option>{% endfor %}</select></div>
+      </form>
+    </section>
+
+    <!-- RESULTADO -->
+    <section class="card">
+      <h2>Precio estimado por la IA</h2>
+      <div class="precio" id="precio">—</div>
+      <div class="rango" id="rango"></div>
+
+      <div class="comp">
+        <div><small>Programación tradicional<br>(regla fija: $30 000 × hab.)</small><strong id="pRegla">—</strong></div>
+        <div><small>IA con 1 variable<br>(tu código original)</small><strong id="pSimple">—</strong></div>
+        <div class="best"><small>IA con 5 variables<br>(modelo completo)</small><strong id="pCompleto">—</strong></div>
+      </div>
+
+      <h2 style="font-size:1rem">¿De dónde sale el precio?</h2>
+      <p class="sub">Aporte de cada característica según lo que aprendió el modelo.</p>
+      <div id="desglose"></div>
+    </section>
+  </div>
+
+  <div class="grid-2">
+    <!-- TRADICIONAL VS IA -->
+    <section class="card">
+      <h2>Programación tradicional vs. Inteligencia Artificial</h2>
+      <p class="sub">La diferencia clave del tema.</p>
+      <div class="vs">
+        <div style="background:#fff4e8">
+          <h3>📏 Tradicional</h3>
+          El programador <b>escribe la regla</b>:<br><code>precio = 30000 * habitaciones</code><br><br>
+          Si el mercado cambia, hay que reescribir el código a mano.
+        </div>
+        <div style="background:var(--primary-soft)">
+          <h3>🤖 Machine Learning</h3>
+          Le damos <b>ejemplos</b> (ventas pasadas) y el modelo <b>descubre la regla</b>:<br><code>modelo.fit(X, precios)</code><br><br>
+          Si llegan datos nuevos, solo se reentrena.
+        </div>
+      </div>
+      <h2 style="font-size:1rem;margin-top:18px">¿Qué tan bien acierta cada enfoque?</h2>
+      <p class="sub" id="subMetricas">Evaluado con casas que el modelo nunca vio.</p>
+      <table>
+        <thead><tr><th>Enfoque</th><th class="n">Error promedio</th><th class="n">R²</th></tr></thead>
+        <tbody id="tablaMetricas"></tbody>
+      </table>
+      <p class="sub" style="margin-top:10px">R² = 1 es perfecto; cerca de 0 o negativo es malo.</p>
+    </section>
+
+    <!-- LO QUE APRENDIÓ -->
+    <section class="card">
+      <h2>¿Qué aprendió el modelo?</h2>
+      <p class="sub">Coeficientes descubiertos por <code>LinearRegression</code> a partir de los datos.</p>
+      <ul class="learn" id="aprendido"></ul>
+      <div class="chart-box"><canvas id="grafico"></canvas></div>
+    </section>
+  </div>
+
+  <!-- NUEVA VENTA -->
+  <section class="card" style="margin-top:20px">
+    <h2>Registrar una venta real y reentrenar</h2>
+    <p class="sub">Agrega una casa vendida: se guarda en <code>datos/casas.csv</code> y el modelo vuelve a aprender con ella.</p>
+    <div class="grid-2" style="margin-top:0">
+      <form id="formVenta">
+        <div class="form-mini">
+          <div><label>Habitaciones</label><input type="number" name="habitaciones" min="1" max="10" value="3" required></div>
+          <div><label>m²</label><input type="number" name="metros2" min="15" max="1000" value="110" required></div>
+          <div><label>Baños</label><input type="number" name="banos" min="1" max="6" value="2" required></div>
+          <div><label>Antigüedad</label><input type="number" name="antiguedad" min="0" max="100" value="5" required></div>
+          <div><label>Zona</label><select name="zona">{% for z in zonas %}<option>{{ z }}</option>{% endfor %}</select></div>
+          <div><label>Precio venta ($)</label><input type="number" name="precio" min="5000" step="100" value="135000" required></div>
+        </div>
+        <button style="margin-top:14px">Guardar venta y reentrenar modelo</button>
+        <div class="msg" id="msgVenta"></div>
+      </form>
+      <div>
+        <label>Últimas ventas en el dataset</label>
+        <table>
+          <thead><tr><th>Hab.</th><th>m²</th><th>Baños</th><th>Años</th><th>Zona</th><th class="n">Precio</th></tr></thead>
+          <tbody id="tablaUltimas"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>Proyecto académico · Tema 2: Python y los Fundamentos de la IA · Flask + Scikit-learn</footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const usd = n => "$" + Math.round(n).toLocaleString("es-ES", {useGrouping: "always"});
+const formCasa = $("#formCasa");
+let grafico, timer;
+
+function datosForm(form) {
+  return Object.fromEntries(new FormData(form).entries());
+}
+
+function pintarValores() {
+  document.querySelectorAll(".val").forEach(el => {
+    el.textContent = formCasa.elements[el.dataset.for].value + (el.dataset.suf || "");
+  });
+}
+
+async function predecir() {
+  const r = await fetch("/api/predecir", {method: "POST", headers: {"Content-Type": "application/json"},
+                                          body: JSON.stringify(datosForm(formCasa))});
+  const d = await r.json();
+  if (!r.ok) { $("#precio").textContent = "Error"; $("#rango").textContent = d.error; return; }
+  $("#precio").textContent = usd(d.precio);
+  $("#rango").textContent = `Rango probable: ${usd(d.rango[0])} – ${usd(d.rango[1])}`;
+  $("#pRegla").textContent = usd(d.precio_regla);
+  $("#pSimple").textContent = usd(d.precio_simple);
+  $("#pCompleto").textContent = usd(d.precio);
+
+  const max = Math.max(...Object.values(d.desglose).map(Math.abs));
+  $("#desglose").innerHTML = Object.entries(d.desglose).map(([k, v]) => {
+    const w = Math.abs(v) / max * 100, color = v >= 0 ? "var(--ok)" : "var(--warn)";
+    return `<div class="bar"><span>${k}</span><div class="track"><div class="fill" style="left:0;width:${w}%;background:${color}"></div></div>
+            <span class="num" style="color:${color}">${v >= 0 ? "+" : "−"}${usd(Math.abs(v))}</span></div>`;
+  }).join("");
+}
+
+async function cargarModelo() {
+  const d = await (await fetch("/api/modelo")).json();
+  const m = d.metricas, c = d.coef;
+  $("#tagDatos").textContent = `Entrenado con ${d.n_casas} casas`;
+  $("#subMetricas").textContent = `Evaluado con ${d.n_test} casas que el modelo nunca vio (20 % de prueba).`;
+
+  const fila = (nombre, x, best) => `<tr${best ? ' style="font-weight:700"' : ""}><td>${nombre}</td>
+      <td class="n">${usd(x.mae)}</td><td class="n">${x.r2.toFixed(3)}</td></tr>`;
+  $("#tablaMetricas").innerHTML = fila("📏 Regla fija", m.regla) + fila("🤖 IA 1 variable", m.simple)
+                                + fila("🤖 IA 5 variables", m.completo, true);
+
+  $("#aprendido").innerHTML = `
+    <li>Cada <b>habitación</b> suma <b>${usd(c.habitaciones)}</b></li>
+    <li>Cada <b>m²</b> suma <b>${usd(c.metros2)}</b></li>
+    <li>Cada <b>baño</b> suma <b>${usd(c.banos)}</b></li>
+    <li>Cada <b>año de antigüedad</b> resta <b>${usd(-c.antiguedad)}</b></li>
+    <li>Zona vs. Norte: Centro ${usd(c.zona_Centro)}, Sur ${c.zona_Sur < 0 ? "−" + usd(-c.zona_Sur) : usd(c.zona_Sur)}, Residencial ${usd(c.zona_Residencial)}</li>`;
+
+  $("#tablaUltimas").innerHTML = d.ultimas.map(u => `<tr><td>${u.habitaciones}</td><td>${u.metros2}</td>
+      <td>${u.banos}</td><td>${u.antiguedad}</td><td>${u.zona}</td><td class="n">${usd(u.precio)}</td></tr>`).join("");
+
+  // Gráfico: datos reales + línea aprendida (1 variable) + regla fija
+  const s = d.simple, xs = [1, 8];
+  const datasets = [
+    {type: "scatter", label: "Ventas reales", data: d.puntos.map(p => ({x: p.habitaciones + (Math.random() - .5) * .3, y: p.precio})),
+     backgroundColor: "rgba(47,111,237,.35)", pointRadius: 3},
+    {type: "line", label: "Línea aprendida por la IA", data: xs.map(x => ({x, y: s.intercepto + s.pendiente * x})),
+     borderColor: "#1f9d63", borderWidth: 3, pointRadius: 0},
+    {type: "line", label: "Regla fija tradicional", data: xs.map(x => ({x, y: d.regla * x})),
+     borderColor: "#d9822b", borderWidth: 2, borderDash: [6, 4], pointRadius: 0},
+  ];
+  if (grafico) { grafico.data.datasets = datasets; grafico.update(); return; }
+  grafico = new Chart($("#grafico"), {
+    data: {datasets},
+    options: {maintainAspectRatio: false, animation: false,
+      plugins: {legend: {position: "bottom", labels: {boxWidth: 12}}},
+      scales: {x: {type: "linear", min: 0.5, max: 8, title: {display: true, text: "Habitaciones"}},
+               y: {title: {display: true, text: "Precio ($)"}, ticks: {callback: v => "$" + v / 1000 + "k"}}}}
+  });
+}
+
+formCasa.addEventListener("input", () => { pintarValores(); clearTimeout(timer); timer = setTimeout(predecir, 120); });
+
+$("#formVenta").addEventListener("submit", async e => {
+  e.preventDefault();
+  const r = await fetch("/api/agregar", {method: "POST", headers: {"Content-Type": "application/json"},
+                                         body: JSON.stringify(datosForm(e.target))});
+  const d = await r.json();
+  $("#msgVenta").innerHTML = r.ok ? `✅ Venta guardada. Modelo reentrenado con <b>${d.n_casas}</b> casas.`
+                                  : `❌ ${d.error}`;
+  if (r.ok) { await cargarModelo(); predecir(); }
+});
+
+pintarValores();
+cargarModelo().then(predecir);
+</script>
+</body>
+</html>
